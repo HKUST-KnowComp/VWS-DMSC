@@ -1,10 +1,12 @@
 import tensorflow as tf
-from util.batch_gen import load_corpus, load_embedding, create_batch_generator
+from util.batch_gen import create_batch_generator
+from util.load import load_corpus, load_query, load_embedding
 
 
 def train(config):
     word2idx, emb = load_embedding(config, config.emb)
     asp_word2idx, asp_emb = load_embedding(config, config.asp_emb)
+    query_emb = load_query(config, config.aspect_seeds, word2idx, emb)
 
     input_types = (tf.int32, tf.int32, tf.int32, tf.float32, tf.int32,
                    tf.int32, tf.int32, tf.int32, tf.float32, tf.int32)

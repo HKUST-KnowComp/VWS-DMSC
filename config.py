@@ -8,7 +8,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 flags.DEFINE_integer("aspect", 0, "aspect index")
 flags.DEFINE_string("mode", "train", "train/debug/test")
-flags.DEFINE_string("aspect_seeds", "", "path to aspect seeds")
+flags.DEFINE_string("aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
 flags.DEFINE_string("train", "data/tripadvisor/train", "path to train data")
 flags.DEFINE_string("dev", "data/tripadvisor/dev", "path to dev data")
 flags.DEFINE_string("test", "data/tripadvisor/test", "path to test data")
@@ -27,8 +27,9 @@ flags.DEFINE_float("learning_rate", 0.001, "learning rate")
 flags.DEFINE_float("en_l2_reg", 0.001, "l2 reg for encoder")
 flags.DEFINE_float("de_l2_reg", 0.001, "l2 reg for decoder")
 flags.DEFINE_float("alpha", 0.1, "")
-
 flags.DEFINE_integer("emb_dim", 200, "dimension of embedding matrix")
+flags.DEFINE_integer("hidden", 200, "hidden dimension")
+
 flags.DEFINE_integer("cache_size", 100, "size of dataset buffer")
 
 flags.DEFINE_integer("eval_period", 100, "evaluate on dev every period")
