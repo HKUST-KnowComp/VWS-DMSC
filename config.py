@@ -6,7 +6,7 @@ from main import train
 flags = tf.flags
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-flags.DEFINE_integer("aspect", 0, "aspect index")
+flags.DEFINE_integer("aspect", 0, "aspect to use in unsupervised learning")
 flags.DEFINE_string("mode", "train", "train/debug/test")
 flags.DEFINE_string(
     "aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
@@ -32,10 +32,12 @@ flags.DEFINE_integer("emb_dim", 200, "dimension of embedding matrix")
 flags.DEFINE_integer("hidden", 200, "hidden dimension")
 
 flags.DEFINE_integer("cache_size", 100, "size of dataset buffer")
+flags.DEFINE_string("log_dir", "log/", "directory for saving log")
 
+flags.DEFINE_integer("record_period", 100, "record loss every period")
 flags.DEFINE_integer("eval_period", 100, "evaluate on dev every period")
 flags.DEFINE_boolean("load_pretrain", True, "load overall as pretrain")
-flags.DEFINE_integer("max_epochs", 5, "maximum number of epochs")
+flags.DEFINE_integer("num_steps", 20000, "maximum number of steps")
 flags.DEFINE_integer("num_batches", 200, "number of batches in evaluation")
 
 flags.DEFINE_integer("score_scale", 5, "score scale")

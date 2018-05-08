@@ -40,7 +40,7 @@ def iterAttention(query, doc, mask=None, hop=1, scope="iter"):
     with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
         num_aspect = tf.shape(query)[0]
         dim_sent = tf.shape(doc)[1]
-        dim = tf.shape(query)[-1]
+        dim = query.get_shape().as_list()[-1]
         att = tf.tile(tf.zeros([1, 1, 1]), [num_aspect, dim_sent, dim])
         res = []
         for _ in range(hop):
@@ -55,7 +55,7 @@ def iterAttention(query, doc, mask=None, hop=1, scope="iter"):
                 att = dense(att, dim, use_bias=False, scope="pick")
                 alpha = tf.tanh(doc * tf.expand_dims(att, axis=2))
                 alpha = dense(alpha, 1, use_bias=False, scope="doc")
-                if mask:
+                if mask is not None:
                     alpha = softmax_mask(alpha, mask)
                 alpha = tf.nn.softmax(alpha, axis=1)
                 att = tf.reduce_sum(alpha * doc, axis=2)

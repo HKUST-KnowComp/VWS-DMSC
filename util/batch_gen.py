@@ -9,7 +9,7 @@ def create_one_batch(arg, ids, corpus):
         for sent in x[i]:
             max_len = max(max_len, len(sent))
 
-    batch_x = [np.asarray([sent + [-1] * (max_len - len(sent))
+    batch_x = [np.asarray([sent + [0] * (max_len - len(sent))
                            for sent in x[i]], dtype=np.int32) for i in ids]
     batch_w_mask = [np.asarray([[1.] * len(sent) + [0.] * (max_len - len(sent))
                                 for sent in x[i]], dtype=np.float32) for i in ids]
@@ -20,8 +20,11 @@ def create_one_batch(arg, ids, corpus):
     batch_w_mask = np.concatenate(batch_w_mask, axis=0)
     batch_w_len = np.concatenate(batch_w_len, axis=0)
 
-    batch_y = np.array([y[i][0] for i in ids])
-    batch_ay = np.array([y[i][1:] for i in ids])
+    batch_y = np.asarray([np.eye(arg.score_scale)[y[i][0]] if y[i][0] >= 0 else np.zeros(
+        arg.score_scale) for i in ids], dtype=np.float32)
+    batch_ay = np.transpose(np.asarray([list(map(lambda x: np.eye(arg.score_scale)[x] if x >= 0 else np.zeros(
+        [arg.score_scale]), y[i][1:])) for i in ids], dtype=np.float32), axes=(1, 0, 2))
+
     batch_asp = []
     batch_senti = []
     batch_weight = []

@@ -5,7 +5,7 @@ from collections import defaultdict
 
 def load_query(config, path, word2idx_dict, emb):
     mat = []
-    with open(path, "r") as fh:
+    with open(path, "r", encoding="iso-8859-1") as fh:
         for line in fh:
             mat.append([emb[word2idx_dict[seed]]
                         for seed in line.strip().split()])
@@ -15,7 +15,7 @@ def load_query(config, path, word2idx_dict, emb):
 def load_corpus(config, path, embedding, asp_embedding, filter_null=False):
     aspect = config.aspect
 
-    with open(path, "r") as fh:
+    with open(path, "r", encoding="iso-8859-1") as fh:
         lines = fh.readlines()
 
     segs = [line.strip().split('\t\t\t') for line in lines]
@@ -76,7 +76,7 @@ def load_corpus(config, path, embedding, asp_embedding, filter_null=False):
 def load_embedding(config, path):
     word2idx_dict = defaultdict(int)
     embedding = [[0. for _ in range(config.emb_dim)]]
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, "r", encoding="iso-8859-1") as fh:
         for i, line in enumerate(fh, 1):
             line = line.split()
             word = " ".join(line[:-config.emb_dim])
