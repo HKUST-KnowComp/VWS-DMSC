@@ -20,7 +20,7 @@ def dense(inputs, hidden, use_bias=True, scope="dense"):
         return res
 
 
-def dropout(args, keep_prob, is_train, mode="recurrent"):
+def dropout(args, keep_prob, is_train, mode=None):
     if keep_prob < 1.0:
         noise_shape = None
         scale = 1.0

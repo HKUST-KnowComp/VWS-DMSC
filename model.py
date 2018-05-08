@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import BasicLSTMCell
-from func import dense, iterAttention
+from func import dense, iterAttention, dropout
 
 
 class Model:
@@ -11,7 +11,7 @@ class Model:
         self.x, self.y, self.ay, self.w_mask, self.w_len, self.sent_num, self.asp, self.senti, self.weight, self.neg_senti = batch.get_next()
         self.num_aspect = query_mat.shape[0]
         self.is_train = tf.get_variable(
-            "is_train", shape=[], dtype=tf.bool, trainable=False)
+            "is_train", shape=[], dtype=tf.bool, initializer=tf.constant_initializer(True), trainable=False)
         self.word_mat = tf.get_variable(
             "word_mat", initializer=tf.constant(word_mat, dtype=tf.float32))
         self.asp_word_mat = tf.get_variable(
@@ -53,6 +53,8 @@ class Model:
                 att, [num_aspect * batch, num_sent, config.hidden * config.hop_word])
 
         with tf.variable_scope("sent_level"):
+            att = dropout(att, keep_prob=config.keep_prob,
+                          is_train=self.is_train)
             cell2_fw = BasicLSTMCell(config.hidden / 2)
             cell2_bw = BasicLSTMCell(config.hidden / 2)
             (att_fw, att_bw), _ = tf.nn.bidirectional_dynamic_rnn(
@@ -66,10 +68,16 @@ class Model:
 
         with tf.variable_scope("predict"):
             losses = []
+            preds = []
+            att = dropout(att, keep_prob=config.keep_prob,
+                          is_train=self.is_train)
             for i in range(num_aspect):
                 with tf.variable_scope("aspect_{}".format(i)):
                     prob = tf.nn.softmax(
                         dense(att[i], config.score_scale), axis=1)
                     loss = tf.reduce_sum(-ay[i] * tf.log(prob + 1e-5), axis=1)
+                    preds.append(tf.expand_dims(
+                        tf.argmax(prob, axis=1), axis=0))
                     losses.append(tf.reduce_mean(loss))
             self.loss = tf.reduce_mean(losses)
+            self.pred = tf.concat(preds, axis=0)
