@@ -36,24 +36,28 @@ def softmax_mask(val, mask):
     return -INF * (1 - tf.cast(mask, tf.float32)) + val
 
 
-def iterAttention(query, doc, mask, dim, hop=1, scope="iter"):
+def iterAttention(query, doc, mask=None, hop=1, scope="iter"):
     with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
-        num_aspect = query.get_shape().as_list()[0]
-        att = tf.zeros([num_aspect, dim])
+        num_aspect = tf.shape(query)[0]
+        dim_sent = tf.shape(doc)[1]
+        dim = tf.shape(query)[-1]
+        att = tf.tile(tf.zeros([1, 1, 1]), [num_aspect, dim_sent, dim])
         res = []
         for _ in range(hop):
             with tf.variable_scope("query"):
                 att = dense(att, dim, use_bias=False, scope="pick")
-                alpha = tf.tanh(query * tf.expand_dims(att, axis=1))
+                alpha = tf.tanh(query * tf.expand_dims(att, axis=2))
                 alpha = tf.nn.softmax(
-                    dense(alpha, 1, use_bias=False, scope="query"), axis=1)
-                att = tf.reduce_sum(alpha * query, axis=1)
+                    dense(alpha, 1, use_bias=False, scope="query"), axis=2)
+                att = tf.reduce_sum(alpha * query, axis=2)
 
             with tf.variable_scope("doc"):
                 att = dense(att, dim, use_bias=False, scope="pick")
-                alpha = tf.tanh(doc * tf.expand_dims(att, axis=1))
-                alpha = tf.nn.softmax(
-                    dense(alpha, 1, use_bias=False, scope="doc"), axis=1)
-                att = tf.reduce_sum(alpha * doc, axis=1)
+                alpha = tf.tanh(doc * tf.expand_dims(att, axis=2))
+                alpha = dense(alpha, 1, use_bias=False, scope="doc")
+                if mask:
+                    alpha = softmax_mask(alpha, mask)
+                alpha = tf.nn.softmax(alpha, axis=1)
+                att = tf.reduce_sum(alpha * doc, axis=2)
             res.append(att + 0.)
         return tf.concat(res, axis=-1)

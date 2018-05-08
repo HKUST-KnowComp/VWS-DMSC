@@ -8,7 +8,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 flags.DEFINE_integer("aspect", 0, "aspect index")
 flags.DEFINE_string("mode", "train", "train/debug/test")
-flags.DEFINE_string("aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
+flags.DEFINE_string(
+    "aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
 flags.DEFINE_string("train", "data/tripadvisor/train", "path to train data")
 flags.DEFINE_string("dev", "data/tripadvisor/dev", "path to dev data")
 flags.DEFINE_string("test", "data/tripadvisor/test", "path to test data")
@@ -37,7 +38,7 @@ flags.DEFINE_boolean("load_pretrain", True, "load overall as pretrain")
 flags.DEFINE_integer("max_epochs", 5, "maximum number of epochs")
 flags.DEFINE_integer("num_batches", 200, "number of batches in evaluation")
 
-flags.DEFINE_integer("score_scale", 2, "score scale")
+flags.DEFINE_integer("score_scale", 5, "score scale")
 flags.DEFINE_integer("num_senti", 5, "number of sentiment word in sampling")
 flags.DEFINE_integer("neg_num", 25, "number of negative sampling")
 flags.DEFINE_integer("min_count", 3, "min count in batches creation")
