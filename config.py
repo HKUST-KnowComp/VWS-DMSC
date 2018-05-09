@@ -5,12 +5,12 @@ from main import train
 
 flags = tf.flags
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 flags.DEFINE_integer("aspect", 0, "aspect to use in unsupervised learning")
 flags.DEFINE_integer("num_aspects", 7, "total number of aspects")
 flags.DEFINE_list("name_aspects", ["value", "room", "location",
                                    "cleaness", "check-in", "service", "business"], "name of aspects")
-flags.DEFINE_string("mode", "train", "train/debug/test")
 flags.DEFINE_string(
     "aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
 flags.DEFINE_string("train", "data/tripadvisor/train", "path to train data")
@@ -47,6 +47,10 @@ flags.DEFINE_integer("score_scale", 5, "score scale")
 flags.DEFINE_integer("num_senti", 5, "number of sentiment word in sampling")
 flags.DEFINE_integer("neg_num", 25, "number of negative sampling")
 flags.DEFINE_integer("min_count", 3, "min count in batches creation")
+flags.DEFINE_boolean("overall", False, "whether to use overall")
+flags.DEFINE_boolean("unsupervised", False,
+                     "whether to use unsupervised method")
+flags.DEFINE_integer("max_to_keep", 20, "number of models to save")
 
 
 def main(_):

@@ -3,6 +3,27 @@ import tensorflow as tf
 INF = 1e20
 
 
+def cudnn_lstm(inputs, num_units, sequence_length=None, scope="cudnn_lstm"):
+    with tf.variable_scope(scope):
+        inputs_fw = tf.transpose(inputs, [1, 0, 2])
+        cell_fw = tf.contrib.cudnn_rnn.CudnnLSTM(1, num_units)
+        cell_bw = tf.contrib.cudnn_rnn.CudnnLSTM(1, num_units)
+        out_fw, _ = cell_fw(inputs_fw)
+        if sequence_length is not None:
+            inputs_bw = tf.reverse_sequence(
+                inputs_fw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
+        else:
+            inputs_bw = tf.reverse(inputs_fw, axis=[0])
+        out_bw, _ = cell_bw(inputs_bw)
+        if sequence_length is not None:
+            out_bw = tf.reverse_sequence(
+                out_bw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
+        else:
+            out_bw = tf.reverse(out_bw, axis=[0])
+        out = tf.transpose(tf.concat([out_fw, out_bw], axis=2), [1, 0, 2])
+        return out
+
+
 def dense(inputs, hidden, use_bias=True, scope="dense"):
     with tf.variable_scope(scope):
         shape = tf.shape(inputs)

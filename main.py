@@ -12,9 +12,17 @@ def train(config):
     asp_word2idx, asp_emb = load_embedding(config, config.asp_emb)
     query_emb = load_query(config, config.aspect_seeds, word2idx, emb)
 
+    if config.overall and not config.unsupervised:
+        query_emb = np.reshape(query_emb, [1, -1, config.emb_dim])
+        config.num_aspects = 1
+
+    if config.unsupervised:
+        query_emb = np.asarray([query_emb[config.aspect]])
+        config.num_aspects = 1
+
     input_types = (tf.int32, tf.float32, tf.float32, tf.float32, tf.int32,
                    tf.int32, tf.int32, tf.int32, tf.float32, tf.int32)
-    input_shapes = (tf.TensorShape([None, None]), tf.TensorShape([None, None]), tf.TensorShape([None, None, None]), tf.TensorShape([None, None]), tf.TensorShape(
+    input_shapes = (tf.TensorShape([None, None]), tf.TensorShape([None, None, None]), tf.TensorShape([None, None, None]), tf.TensorShape([None, None]), tf.TensorShape(
         [None]), tf.TensorShape([]), tf.TensorShape([None, None]), tf.TensorShape([None, None]), tf.TensorShape([None, None]), tf.TensorShape([None, None]))
 
     train_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
@@ -38,11 +46,15 @@ def train(config):
         train_handle = sess.run(train_batch.string_handle())
         dev_handle = sess.run(dev_batch.string_handle())
         test_handle = sess.run(test_batch.string_handle())
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(var_list=model.var_to_save,
+                               max_to_keep=config.max_to_keep)
+        if config.unsupervised:
+            saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
+        train_op = model.r_train_op if config.unsupervised else model.train_op
         sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
         for _ in tqdm(range(1, config.num_steps + 1), ascii=True):
             global_step = sess.run(model.global_step) + 1
-            loss, _ = sess.run([model.loss, model.train_op],
+            loss, _ = sess.run([model.loss, train_op],
                                feed_dict={handle: train_handle})
 
             if global_step % config.record_period == 0:

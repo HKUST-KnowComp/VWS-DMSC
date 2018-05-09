@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import BasicLSTMCell
-from func import dense, iterAttention, dropout
+from func import dense, iterAttention, dropout, cudnn_lstm
 
 
 class Model:
@@ -28,6 +28,7 @@ class Model:
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="predict")
         self.decoder_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="decoder")
+        self.var_to_save = self.word_level_vars + self.sent_level_vars
 
         en_reg = tf.contrib.layers.l2_regularizer(config.en_l2_reg)
         de_reg = tf.contrib.layers.l2_regularizer(config.de_l2_reg)
@@ -51,17 +52,15 @@ class Model:
         x, y, ay, w_mask, w_len, num_sent, senti, weight, neg_senti = self.x, self.y, self.ay, self.w_mask, self.w_len, self.sent_num, self.senti, self.weight, self.neg_senti
         word_mat, asp_word_mat, query_mat = self.word_mat, self.asp_word_mat, self.query_mat
 
+        target = y if config.overall else ay
+
         num_aspect = self.num_aspect
         score_scale = config.score_scale
         batch = tf.floordiv(tf.shape(x)[0], num_sent)
 
         with tf.variable_scope("word_level"):
             x = tf.nn.embedding_lookup(word_mat, x)
-            cell_fw = BasicLSTMCell(config.hidden / 2)
-            cell_bw = BasicLSTMCell(config.hidden / 2)
-            (x_fw, x_bw), _ = tf.nn.bidirectional_dynamic_rnn(
-                cell_fw, cell_bw, x, sequence_length=w_len, dtype=tf.float32)
-            x = tf.concat([x_fw, x_bw], axis=-1)
+            x = cudnn_lstm(x, config.hidden // 2, sequence_length=w_len)
             query = tf.tanh(dense(query_mat, config.hidden))
 
             query = tf.expand_dims(query, axis=1)
@@ -75,11 +74,7 @@ class Model:
         with tf.variable_scope("sent_level"):
             att = dropout(att, keep_prob=config.keep_prob,
                           is_train=self.is_train)
-            cell2_fw = BasicLSTMCell(config.hidden / 2)
-            cell2_bw = BasicLSTMCell(config.hidden / 2)
-            (att_fw, att_bw), _ = tf.nn.bidirectional_dynamic_rnn(
-                cell2_fw, cell2_bw, att, dtype=tf.float32)
-            att = tf.concat([att_fw, att_bw], axis=-1)
+            att = cudnn_lstm(att, config.hidden // 2)
             query = tf.tanh(dense(query_mat, config.hidden))
 
             query = tf.expand_dims(query, axis=1)
@@ -96,7 +91,8 @@ class Model:
                 with tf.variable_scope("aspect_{}".format(i)):
                     prob = tf.nn.softmax(
                         dense(att[i], config.score_scale, use_bias=False), axis=1)
-                    loss = tf.reduce_sum(-ay[i] * tf.log(prob + 1e-5), axis=1)
+                    loss = tf.reduce_sum(
+                        -target[i] * tf.log(prob + 1e-5), axis=1)
                     probs.append(tf.expand_dims(prob, axis=0))
                     preds.append(tf.expand_dims(
                         tf.argmax(prob, axis=1), axis=0))

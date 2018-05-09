@@ -20,8 +20,8 @@ def create_one_batch(arg, ids, corpus):
     batch_w_mask = np.concatenate(batch_w_mask, axis=0)
     batch_w_len = np.concatenate(batch_w_len, axis=0)
 
-    batch_y = np.asarray([np.eye(arg.score_scale)[y[i][0]] if y[i][0] >= 0 else np.zeros(
-        arg.score_scale) for i in ids], dtype=np.float32)
+    batch_y = np.asarray([[np.eye(arg.score_scale)[y[i][0]] if y[i][0] >= 0 else np.zeros(
+        arg.score_scale) for i in ids]], dtype=np.float32)
     batch_ay = np.transpose(np.asarray([list(map(lambda x: np.eye(arg.score_scale)[x] if x >= 0 else np.zeros(
         [arg.score_scale]), y[i][1:])) for i in ids], dtype=np.float32), axes=(1, 0, 2))
 
