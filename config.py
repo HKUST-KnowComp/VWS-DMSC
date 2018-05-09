@@ -22,7 +22,7 @@ flags.DEFINE_string("asp_emb", "data/tripadvisor/ret_emb",
                     "path to pre-trained aspect embedding")
 
 
-flags.DEFINE_integer("batch_size", 8, "mini-batch size")
+flags.DEFINE_integer("batch_size", 3, "mini-batch size")
 flags.DEFINE_integer("test_batch_size", 32, "mini-batch size for test")
 flags.DEFINE_float("keep_prob", 0.7, "dropout rate")
 flags.DEFINE_integer("hop_sent", 2, "hop for sentence level")
