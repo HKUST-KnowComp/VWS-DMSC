@@ -1,4 +1,5 @@
 import os
+import random
 import tensorflow as tf
 import numpy as np
 from model import Model
@@ -26,6 +27,8 @@ def train(config):
     dev_batch_list = list(batch_generator(config, load_corpus(
         config, config.dev, word2idx, asp_word2idx)))
 
+    random.shuffle(train_batch_list)
+    random.shuffle(dev_batch_list)
     num_train_batch = len(train_batch_list)
     num_dev_batch = len(dev_batch_list)
 
