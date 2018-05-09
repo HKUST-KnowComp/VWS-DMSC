@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.contrib.rnn import BasicLSTMCell
 from func import dense, iterAttention, dropout, cudnn_lstm
 
 

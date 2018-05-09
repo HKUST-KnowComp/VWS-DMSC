@@ -2,7 +2,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from model import Model
-from util.batch_gen import create_batch_generator
+from util.batch_gen import batch_generator, list_wrapper
 from util.load import load_corpus, load_query, load_embedding
 from tqdm import tqdm
 
@@ -20,17 +20,24 @@ def train(config):
         query_emb = np.asarray([query_emb[config.aspect]])
         config.num_aspects = 1
 
+    print("Building Batches")
+    train_batch_list = list(batch_generator(config, load_corpus(
+        config, config.train, word2idx, asp_word2idx, filter_null=config.unsupervised)))
+    dev_batch_list = list(batch_generator(config, load_corpus(
+        config, config.dev, word2idx, asp_word2idx)))
+
+    num_train_batch = len(train_batch_list)
+    num_dev_batch = len(dev_batch_list)
+
     input_types = (tf.int32, tf.float32, tf.float32, tf.float32, tf.int32,
                    tf.int32, tf.int32, tf.int32, tf.float32, tf.int32)
     input_shapes = (tf.TensorShape([None, None]), tf.TensorShape([None, None, None]), tf.TensorShape([None, None, None]), tf.TensorShape([None, None]), tf.TensorShape(
         [None]), tf.TensorShape([]), tf.TensorShape([None, None]), tf.TensorShape([None, None]), tf.TensorShape([None, None]), tf.TensorShape([None, None]))
 
-    train_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
-        config, config.train, word2idx, asp_word2idx, filter_null=True)), input_types, input_shapes).repeat().shuffle(config.cache_size).make_one_shot_iterator()
-    dev_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
-        config, config.dev, word2idx, asp_word2idx)), input_types, input_shapes).repeat().make_one_shot_iterator()
-    test_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
-        config, config.test, word2idx, asp_word2idx)), input_types, input_shapes).repeat().make_one_shot_iterator()
+    train_batch = tf.data.Dataset.from_generator(list_wrapper(
+        train_batch_list), input_types, input_shapes).repeat().shuffle(config.cache_size).make_one_shot_iterator()
+    dev_batch = tf.data.Dataset.from_generator(list_wrapper(
+        dev_batch_list), input_types, input_shapes).repeat().make_one_shot_iterator()
 
     handle = tf.placeholder(tf.string, shape=[])
     batch = tf.data.Iterator.from_string_handle(
@@ -45,14 +52,13 @@ def train(config):
         sess.run(tf.global_variables_initializer())
         train_handle = sess.run(train_batch.string_handle())
         dev_handle = sess.run(dev_batch.string_handle())
-        test_handle = sess.run(test_batch.string_handle())
         saver = tf.train.Saver(var_list=model.var_to_save,
                                max_to_keep=config.max_to_keep)
         if config.unsupervised:
             saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
         train_op = model.r_train_op if config.unsupervised else model.train_op
         sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
-        for _ in tqdm(range(1, config.num_steps + 1), ascii=True):
+        for _ in tqdm(range(1, num_train_batch * config.num_epochs + 1), ascii=True):
             global_step = sess.run(model.global_step) + 1
             loss, _ = sess.run([model.loss, train_op],
                                feed_dict={handle: train_handle})
@@ -67,11 +73,11 @@ def train(config):
                 sess.run(tf.assign(model.is_train,
                                    tf.constant(False, dtype=tf.bool)))
                 _, _, summ = evaluate(
-                    config, model, sess, handle, train_handle, tag="train")
+                    config, model, config.num_batches, sess, handle, train_handle, tag="train")
                 for s in summ:
                     writer.add_summary(s, global_step)
                 _, _, summ = evaluate(
-                    config, model, sess, handle, dev_handle, tag="dev")
+                    config, model, num_dev_batch, sess, handle, dev_handle, tag="dev")
                 sess.run(tf.assign(model.is_train,
                                    tf.constant(True, dtype=tf.bool)))
                 for s in summ:
@@ -82,13 +88,13 @@ def train(config):
                 saver.save(sess, filename)
 
 
-def evaluate(config, model, sess, handle, str_handle, tag="train"):
+def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
     mean_loss = 0.
     corr = [0. for _ in range(config.num_aspects)]
     total = [0. for _ in range(config.num_aspects)]
     overall_corr = 0.
     overall_total = 0.
-    for _ in range(config.num_batches):
+    for _ in range(num_batches):
         loss, pred, ay = sess.run(
             [model.loss, model.pred, model.ay], feed_dict={handle: str_handle})
         mean_loss += loss

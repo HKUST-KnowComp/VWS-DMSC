@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from tqdm import tqdm
 
 
 def create_one_batch(arg, ids, corpus):
@@ -62,27 +63,34 @@ def create_one_batch(arg, ids, corpus):
         batch_weight.append(weight_)
         batch_neg_senti.append(neg_senti_)
 
-    batch_asp = np.transpose(np.asarray(batch_asp), (1, 0))
-    batch_senti = np.transpose(np.asarray(batch_senti), (1, 0))
-    batch_weight = np.transpose(np.asarray(batch_weight), (1, 0))
-    batch_neg_senti = np.transpose(np.asarray(batch_neg_senti), (1, 0))
+    batch_asp = np.transpose(np.asarray(batch_asp, dtype=np.int32), (1, 0))
+    batch_senti = np.transpose(np.asarray(batch_senti, dtype=np.int32), (1, 0))
+    batch_weight = np.transpose(np.asarray(
+        batch_weight, dtype=np.float32), (1, 0))
+    batch_neg_senti = np.transpose(np.asarray(
+        batch_neg_senti, dtype=np.int32), (1, 0))
     return batch_x, batch_y, batch_ay, batch_w_mask, batch_w_len, batch_asp, batch_senti, batch_weight, batch_neg_senti
 
 
-def create_batch_generator(arg, corpus):
-    def create_batches():
-        batch_size = arg.batch_size
-        idxs = list(range(len(corpus[0])))
-        random.shuffle(idxs)
-        idxs = sorted(idxs, key=lambda i: len(corpus[0][i]))
-        batch_idx = [idxs[0]]
-        for i in idxs:
-            if len(batch_idx) < batch_size and len(corpus[0][batch_idx[0]]) == len(corpus[0][i]):
-                batch_idx.append(i)
-            else:
-                batch_x, batch_y, batch_ay, batch_w_mask, batch_w_len, batch_asp, batch_senti, batch_weight, batch_neg_senti = create_one_batch(
-                    arg, batch_idx, corpus)
-                sent_num = len(corpus[0][batch_idx[0]])
-                batch_idx = [i]
-                yield batch_x, batch_y, batch_ay, batch_w_mask, batch_w_len, sent_num, batch_asp, batch_senti, batch_weight, batch_neg_senti
-    return create_batches
+def batch_generator(arg, corpus):
+    batch_size = arg.batch_size
+    idxs = list(range(len(corpus[0])))
+    random.shuffle(idxs)
+    idxs = sorted(idxs, key=lambda i: len(corpus[0][i]))
+    batch_idx = [idxs[0]]
+    for i in tqdm(idxs):
+        if len(batch_idx) < batch_size and len(corpus[0][batch_idx[0]]) == len(corpus[0][i]):
+            batch_idx.append(i)
+        else:
+            batch_x, batch_y, batch_ay, batch_w_mask, batch_w_len, batch_asp, batch_senti, batch_weight, batch_neg_senti = create_one_batch(
+                arg, batch_idx, corpus)
+            sent_num = len(corpus[0][batch_idx[0]])
+            batch_idx = [i]
+            yield batch_x, batch_y, batch_ay, batch_w_mask, batch_w_len, sent_num, batch_asp, batch_senti, batch_weight, batch_neg_senti
+
+
+def list_wrapper(lis):
+    def tmp():
+        for i in lis:
+            yield i
+    return tmp
