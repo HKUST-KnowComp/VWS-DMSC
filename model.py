@@ -95,7 +95,7 @@ class Model:
             for i in range(num_aspect):
                 with tf.variable_scope("aspect_{}".format(i)):
                     prob = tf.nn.softmax(
-                        dense(att[i], config.score_scale), axis=1)
+                        dense(att[i], config.score_scale, use_bias=False), axis=1)
                     loss = tf.reduce_sum(-ay[i] * tf.log(prob + 1e-5), axis=1)
                     probs.append(tf.expand_dims(prob, axis=0))
                     preds.append(tf.expand_dims(
@@ -123,5 +123,5 @@ class Model:
 
                 w = tf.reduce_max(tf.abs(weight), axis=1)
                 num = tf.reduce_sum(w) + 1e-5
-                self.r_loss = r_loss / num
-                self.u_loss = u_loss / num
+            self.r_loss = r_loss / num
+            self.u_loss = u_loss / num

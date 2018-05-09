@@ -20,9 +20,9 @@ def train(config):
     train_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
         config, config.train, word2idx, asp_word2idx, filter_null=True)), input_types, input_shapes).repeat().shuffle(config.cache_size).make_one_shot_iterator()
     dev_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
-        config, config.dev, word2idx, asp_word2idx)), input_types, input_shapes).make_one_shot_iterator()
+        config, config.dev, word2idx, asp_word2idx)), input_types, input_shapes).repeat().make_one_shot_iterator()
     test_batch = tf.data.Dataset.from_generator(create_batch_generator(config, load_corpus(
-        config, config.test, word2idx, asp_word2idx)), input_types, input_shapes).make_one_shot_iterator()
+        config, config.test, word2idx, asp_word2idx)), input_types, input_shapes).repeat().make_one_shot_iterator()
 
     handle = tf.placeholder(tf.string, shape=[])
     batch = tf.data.Iterator.from_string_handle(
