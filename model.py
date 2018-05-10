@@ -10,7 +10,7 @@ class Model:
         self.x, self.y, self.ay, self.w_mask, self.w_len, self.sent_num, self.asp, self.senti, self.weight, self.neg_senti = batch.get_next()
         self.num_aspect = config.num_aspects
         self.is_train = tf.get_variable(
-            "is_train", shape=[], dtype=tf.bool, initializer=tf.constant_initializer(True), trainable=False)
+            "is_train", shape=[], dtype=tf.bool, trainable=False)
         self.word_mat = tf.get_variable(
             "word_mat", initializer=tf.constant(word_mat, dtype=tf.float32))
         self.asp_word_mat = asp_word_mat
@@ -58,7 +58,8 @@ class Model:
         batch = tf.floordiv(tf.shape(x)[0], num_sent)
 
         with tf.variable_scope("word_level"):
-            x = tf.nn.embedding_lookup(word_mat, x)
+            x = dropout(tf.nn.embedding_lookup(word_mat, x),
+                        keep_prob=config.keep_prob, is_train=self.is_train)
             x = cudnn_lstm(x, config.hidden // 2, sequence_length=w_len)
             query = tf.tanh(dense(query_mat, config.hidden))
 
