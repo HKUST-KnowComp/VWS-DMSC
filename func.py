@@ -65,22 +65,24 @@ def iter_attention(query, doc, mask=None, hop=1, scope="iter"):
         dim_sent = tf.shape(doc)[1]
         dim = query.get_shape().as_list()[-1]
         att = tf.tile(tf.zeros([1, 1, 1]), [num_aspect, dim_sent, dim])
+        query = tf.expand_dims(query, axis=2)
         ress = []
         for _ in range(hop):
 
             att = dense(att, dim, use_bias=False, scope="pick")
-            alpha = tf.tanh(query * tf.expand_dims(att, axis=2))
-            alpha = tf.nn.softmax(
-                dense(alpha, 1, use_bias=False, scope="query"), axis=2)
-            att = tf.reduce_sum(alpha * query, axis=2)
+            alpha = tf.tanh(query * tf.expand_dims(att, axis=1))
+            alpha = tf.nn.softmax(tf.squeeze(
+                dense(alpha, 1, use_bias=False, scope="query"), axis=3), axis=1)
+            att = tf.reduce_sum(tf.expand_dims(alpha, axis=3) * query, axis=1)
 
             att = dense(att, dim, use_bias=False, scope="pick")
             alpha = tf.tanh(doc * tf.expand_dims(att, axis=2))
-            alpha = dense(alpha, 1, use_bias=False, scope="doc")
+            alpha = tf.squeeze(
+                dense(alpha, 1, use_bias=False, scope="doc"), axis=3)
             if mask is not None:
                 alpha = softmax_mask(alpha, mask)
-            alpha = tf.nn.softmax(alpha, axis=1)
-            res = tf.reduce_sum(alpha * doc, axis=2)
+            alpha = tf.nn.softmax(alpha, axis=2)
+            res = tf.reduce_sum(tf.expand_dims(alpha, axis=3) * doc, axis=2)
             ress.append(res)
             att = res
-        return tf.concat(ress, axis=-1)
+        return tf.concat(ress, axis=2)

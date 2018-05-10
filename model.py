@@ -63,9 +63,8 @@ class Model:
             x = cudnn_lstm(x, config.hidden // 2, sequence_length=w_len)
             query = tf.tanh(dense(query_mat, config.hidden))
 
-            query = tf.expand_dims(query, axis=1)
             doc = tf.expand_dims(x, axis=0)
-            mask = tf.expand_dims(tf.expand_dims(w_mask, axis=0), axis=3)
+            mask = tf.expand_dims(w_mask, axis=0)
 
             att = iter_attention(query, doc, mask, hop=config.hop_word)
             att = tf.reshape(
@@ -77,7 +76,6 @@ class Model:
             att = cudnn_lstm(att, config.hidden // 2)
             query = tf.tanh(dense(query_mat, config.hidden))
 
-            query = tf.expand_dims(query, axis=1)
             doc = tf.reshape(att, [num_aspect, batch, num_sent, config.hidden])
             att = iter_attention(query, doc, hop=config.hop_sent)
 
@@ -90,16 +88,15 @@ class Model:
             for i in range(num_aspect):
                 with tf.variable_scope("aspect_{}".format(i)):
                     prob = tf.nn.softmax(
-                        dense(att[i], config.score_scale, use_bias=False), axis=1)
+                        dense(att[i], config.score_scale, use_bias=False))
                     loss = tf.reduce_sum(
                         -target[i] * tf.log(prob + 1e-5), axis=1)
-                    probs.append(tf.expand_dims(prob, axis=0))
-                    preds.append(tf.expand_dims(
-                        tf.argmax(prob, axis=1), axis=0))
+                    probs.append(prob)
+                    preds.append(tf.argmax(prob, axis=1))
                     losses.append(tf.reduce_mean(loss))
-            self.probs = tf.concat(probs, axis=0)
+            self.probs = tf.stack(probs, axis=0)
+            self.pred = tf.stack(preds, axis=0)
             self.loss = tf.reduce_mean(losses)
-            self.pred = tf.concat(preds, axis=0)
 
         with tf.variable_scope("decoder"):
             emb = tf.get_variable("emb", initializer=tf.constant(
