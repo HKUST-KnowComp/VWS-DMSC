@@ -8,18 +8,20 @@ def cudnn_lstm(inputs, num_units, sequence_length=None, scope="cudnn_lstm"):
         inputs_fw = tf.transpose(inputs, [1, 0, 2])
         cell_fw = tf.contrib.cudnn_rnn.CudnnLSTM(1, num_units)
         cell_bw = tf.contrib.cudnn_rnn.CudnnLSTM(1, num_units)
-        out_fw, _ = cell_fw(inputs_fw)
-        if sequence_length is not None:
-            inputs_bw = tf.reverse_sequence(
-                inputs_fw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
-        else:
-            inputs_bw = tf.reverse(inputs_fw, axis=[0])
-        out_bw, _ = cell_bw(inputs_bw)
-        if sequence_length is not None:
-            out_bw = tf.reverse_sequence(
-                out_bw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
-        else:
-            out_bw = tf.reverse(out_bw, axis=[0])
+        with tf.variable_scope("fw"):
+            out_fw, _ = cell_fw(inputs_fw)
+        with tf.variable_scope("bw"):
+            if sequence_length is not None:
+                inputs_bw = tf.reverse_sequence(
+                    inputs_fw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
+            else:
+                inputs_bw = tf.reverse(inputs_fw, axis=[0])
+            out_bw, _ = cell_bw(inputs_bw)
+            if sequence_length is not None:
+                out_bw = tf.reverse_sequence(
+                    out_bw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
+            else:
+                out_bw = tf.reverse(out_bw, axis=[0])
         out = tf.transpose(tf.concat([out_fw, out_bw], axis=2), [1, 0, 2])
         return out
 
@@ -57,7 +59,7 @@ def softmax_mask(val, mask):
     return -INF * (1 - tf.cast(mask, tf.float32)) + val
 
 
-def iterAttention(query, doc, mask=None, hop=1, scope="iter"):
+def iter_attention(query, doc, mask=None, hop=1, scope="iter"):
     with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
         num_aspect = tf.shape(query)[0]
         dim_sent = tf.shape(doc)[1]

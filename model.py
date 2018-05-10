@@ -1,5 +1,5 @@
 import tensorflow as tf
-from func import dense, iterAttention, dropout, cudnn_lstm
+from func import dense, iter_attention, dropout, cudnn_lstm
 
 
 class Model:
@@ -8,7 +8,7 @@ class Model:
         self.global_step = tf.get_variable("global_step", shape=[
         ], dtype=tf.int32, initializer=tf.constant_initializer(0), trainable=False)
         self.x, self.y, self.ay, self.w_mask, self.w_len, self.sent_num, self.asp, self.senti, self.weight, self.neg_senti = batch.get_next()
-        self.num_aspect = query_mat.shape[0]
+        self.num_aspect = config.num_aspects
         self.is_train = tf.get_variable(
             "is_train", shape=[], dtype=tf.bool, initializer=tf.constant_initializer(True), trainable=False)
         self.word_mat = tf.get_variable(
@@ -66,7 +66,7 @@ class Model:
             doc = tf.expand_dims(x, axis=0)
             mask = tf.expand_dims(tf.expand_dims(w_mask, axis=0), axis=3)
 
-            att = iterAttention(query, doc, mask, hop=config.hop_word)
+            att = iter_attention(query, doc, mask, hop=config.hop_word)
             att = tf.reshape(
                 att, [num_aspect * batch, num_sent, config.hidden * config.hop_word])
 
@@ -78,7 +78,7 @@ class Model:
 
             query = tf.expand_dims(query, axis=1)
             doc = tf.reshape(att, [num_aspect, batch, num_sent, config.hidden])
-            att = iterAttention(query, doc, hop=config.hop_sent)
+            att = iter_attention(query, doc, hop=config.hop_sent)
 
         with tf.variable_scope("predict"):
             probs = []
