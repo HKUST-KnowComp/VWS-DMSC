@@ -63,12 +63,10 @@ def create_one_batch(arg, ids, corpus):
         batch_weight.append(weight_)
         batch_neg_senti.append(neg_senti_)
 
-    batch_asp = np.transpose(np.asarray(batch_asp, dtype=np.int32), (1, 0))
-    batch_senti = np.transpose(np.asarray(batch_senti, dtype=np.int32), (1, 0))
-    batch_weight = np.transpose(np.asarray(
-        batch_weight, dtype=np.float32), (1, 0))
-    batch_neg_senti = np.transpose(np.asarray(
-        batch_neg_senti, dtype=np.int32), (1, 0))
+    batch_asp = np.asarray(batch_asp, dtype=np.int32)
+    batch_senti = np.asarray(batch_senti, dtype=np.int32)
+    batch_weight = np.asarray(batch_weight, dtype=np.float32)
+    batch_neg_senti = np.asarray(batch_neg_senti, dtype=np.int32)
     return batch_x, batch_y, batch_ay, batch_w_mask, batch_w_len, batch_asp, batch_senti, batch_weight, batch_neg_senti
 
 

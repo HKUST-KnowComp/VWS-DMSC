@@ -1,5 +1,5 @@
 import tensorflow as tf
-from func import dense, iter_attention, dropout, cudnn_lstm
+from func import dense, iter_attention, dropout, cudnn_lstm, selectional_preference
 
 
 class Model:
@@ -17,41 +17,40 @@ class Model:
             "asp_word_mat", initializer=tf.constant(asp_word_mat, dtype=tf.float32))
         self.query_mat = tf.get_variable(
             "query_mat", initializer=tf.constant(query_mat, dtype=tf.float32))
+        self.loss, self.r_loss, self.u_loss = None, None, None
 
         self.ready()
 
-        self.vars = [self.query_mat]
-        self.word_level_vars = tf.get_collection(
+        word_level_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="word_level")
-        self.sent_level_vars = tf.get_collection(
+        sent_level_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="sent_level")
-        self.predict_vars = tf.get_collection(
+        pred_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="predict")
-        self.decoder_vars = tf.get_collection(
+        dec_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="decoder")
-        self.var_to_save = self.word_level_vars + self.sent_level_vars + self.vars
+        self.var_to_save = word_level_vars + sent_level_vars + [self.query_mat]
+
+        sup_vars = word_level_vars + sent_level_vars + \
+            pred_vars + [self.query_mat]
+        un_vars = pred_vars + dec_vars
 
         en_reg = tf.contrib.layers.l2_regularizer(config.en_l2_reg)
         de_reg = tf.contrib.layers.l2_regularizer(config.de_l2_reg)
-        en_l2 = tf.contrib.layers.apply_regularization(
-            en_reg, self.word_level_vars + self.sent_level_vars + self.vars)
-        de_l2 = tf.contrib.layers.apply_regularization(
-            de_reg, self.predict_vars + self.decoder_vars)
-        self.l2_loss = en_l2 + de_l2
+        sup_l2 = tf.contrib.layers.apply_regularization(en_reg, sup_vars)
+        un_l2 = tf.contrib.layers.apply_regularization(de_reg, un_vars)
 
+        self.t_loss = self.r_loss + un_l2 if config.unsupervised else self.loss + sup_l2
+        var_list = un_vars + \
+            [self.asp_word_mat] if config.unsupervised else None
         self.opt = tf.train.AdadeltaOptimizer(config.learning_rate)
-        self.r_opt = tf.train.AdadeltaOptimizer(config.learning_rate)
         self.train_op = self.opt.minimize(
-            self.loss + self.l2_loss, global_step=self.global_step)
-        self.r_train_op = self.r_opt.minimize(
-            self.r_loss + self.l2_loss, var_list=self.predict_vars + self.decoder_vars, global_step=self.global_step)
+            self.t_loss, global_step=self.global_step, var_list=var_list)
 
     def ready(self):
         config = self.config
-        x, y, ay, w_mask, w_len, num_sent, senti, weight, neg_senti = self.x, self.y, self.ay, self.w_mask, self.w_len, self.sent_num, self.senti, self.weight, self.neg_senti
+        x, w_mask, w_len, num_sent, senti, weight, neg_senti = self.x, self.w_mask, self.w_len, self.sent_num, self.senti, self.weight, self.neg_senti
         word_mat, asp_word_mat, query_mat = self.word_mat, self.asp_word_mat, self.query_mat
-
-        target = y if config.overall else ay
 
         num_aspect = self.num_aspect
         score_scale = config.score_scale
@@ -81,38 +80,23 @@ class Model:
 
         with tf.variable_scope("predict"):
             probs = []
-            losses = []
-            preds = []
             att = dropout(att, keep_prob=config.keep_prob,
                           is_train=self.is_train)
-            for i in range(num_aspect):
+            aspects = [config.aspect] if config.unsupervised else list(
+                range(num_aspect))
+            for i in aspects:
                 with tf.variable_scope("aspect_{}".format(i)):
-                    prob = tf.nn.softmax(
-                        dense(att[i], config.score_scale, use_bias=False))
-                    loss = tf.reduce_sum(
-                        -target[i] * tf.log(prob + 1e-5), axis=1)
-                    probs.append(prob)
-                    preds.append(tf.argmax(prob, axis=1))
-                    losses.append(tf.reduce_mean(loss))
-            self.probs = tf.stack(probs, axis=0)
-            self.pred = tf.stack(preds, axis=0)
-            self.loss = tf.reduce_sum(losses)
+                    probs.append(tf.nn.softmax(dense(att[i], score_scale)))
+            self.prob = tf.stack(probs, axis=0)
+            self.pred = tf.argmax(self.prob, axis=2)
+
+            if not config.unsupervised:
+                target = self.y if config.overall else self.ay
+                self.loss = tf.reduce_sum(tf.reduce_mean(
+                    tf.reduce_sum(-target * tf.log(self.prob + 1e-5), axis=2), axis=1))
 
         with tf.variable_scope("decoder"):
             sent_emb = tf.nn.embedding_lookup(asp_word_mat, senti)
             neg_sent_emb = tf.nn.embedding_lookup(asp_word_mat, neg_senti)
-            with tf.variable_scope("selectional_preference", reuse=tf.AUTO_REUSE):
-                w = tf.expand_dims(weight, axis=2)
-                u = dense(sent_emb, score_scale, use_bias=False)
-                v = dense(neg_sent_emb, score_scale, use_bias=False)
-                u = tf.reduce_sum(tf.log(tf.nn.softmax(u * w)), axis=1)
-                v = tf.reduce_sum(tf.log(tf.nn.softmax(-v)), axis=1)
-
-                r_loss = tf.reduce_sum(
-                    (u + v) * self.probs[config.aspect], axis=1)
-                u_loss = tf.reduce_sum(u * self.probs[config.aspect], axis=1)
-
-                w = tf.reduce_max(tf.abs(weight), axis=1)
-                num = tf.reduce_sum(w) + 1e-5
-            self.r_loss = r_loss / num
-            self.u_loss = u_loss / num
+            self.r_loss, self.u_loss = selectional_preference(
+                sent_emb, neg_sent_emb, weight, self.prob[0], score_scale, alpha=config.alpha, norm=config.norm, num_head=config.num_head)

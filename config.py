@@ -40,7 +40,7 @@ flags.DEFINE_string("save_dir", "model/", "directory for saving model")
 
 flags.DEFINE_integer("record_period", 100, "record loss every period")
 flags.DEFINE_integer("eval_period", 1000, "evaluate on dev every period")
-flags.DEFINE_integer("num_epochs", 50, "maximum number of epochs")
+flags.DEFINE_integer("num_epochs", 20, "maximum number of epochs")
 flags.DEFINE_integer("num_batches", 200, "number of batches in evaluation")
 
 flags.DEFINE_integer("score_scale", 5, "score scale")
@@ -51,6 +51,10 @@ flags.DEFINE_boolean("overall", False, "whether to use overall")
 flags.DEFINE_boolean("unsupervised", False,
                      "whether to use unsupervised method")
 flags.DEFINE_integer("max_to_keep", 20, "number of models to save")
+flags.DEFINE_boolean(
+    "norm", True, "whether to normalize the weights in selectional preference")
+flags.DEFINE_integer(
+    "num_head", 1, "number of heads used in selectional preference")
 
 
 def main(_):

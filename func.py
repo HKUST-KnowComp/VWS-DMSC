@@ -79,3 +79,55 @@ def iter_attention(query, doc, mask=None, hop=1, scope="iter"):
             ress.append(res)
             att = res
         return tf.concat(ress, axis=2)
+
+
+def selectional_preference(sent_emb, neg_sent_emb, weight, probs, score_scale, alpha=0., scale=0.1, norm=True, num_head=1):
+
+    def linear(inputs, W):
+        shape = tf.shape(inputs)
+        dim = inputs.get_shape().as_list()[-1]
+        out_shape = [shape[idx] for idx in range(
+            len(inputs.get_shape().as_list()) - 1)] + [W.get_shape().as_list()[-1]]
+        flat_inputs = tf.reshape(inputs, [-1, dim])
+        res = tf.matmul(flat_inputs, W)
+        res = tf.reshape(res, out_shape)
+        return res
+
+    with tf.variable_scope("selectional_preference"):
+        input_dim = sent_emb.get_shape().as_list()[-1]
+
+        us, vs = [], []
+        for i in range(num_head):
+            with tf.variable_scope("head_{}".format(i)):
+                W = tf.get_variable("W", [input_dim, score_scale])
+                if norm:
+                    W_norm = tf.reduce_sum(
+                        tf.square(W), axis=0, keepdims=True)
+                    W = W / W_norm * \
+                        tf.get_variable(
+                            "scale", [], initializer=tf.constant_initializer(scale))
+                w = tf.expand_dims(weight, axis=2)
+                us.append(tf.nn.sigmoid(linear(sent_emb, W) * w))
+                vs.append(tf.nn.sigmoid(-linear(neg_sent_emb, W)))
+        u = tf.stack(us, axis=3)
+        v = tf.stack(vs, axis=3)
+
+        if num_head == 1:
+            u = tf.squeeze(u, axis=3)
+            v = tf.squeeze(v, axis=3)
+        else:
+            a = tf.nn.softmax(tf.get_variable("a", [1, 1, 1, num_head]))
+            u = tf.reduce_sum(a * u, axis=3)
+            v = tf.reduce_sum(a * v, axis=3)
+        u = tf.reduce_sum(-tf.log(u), axis=1)
+        v = tf.reduce_sum(-tf.log(v), axis=1)
+
+        w = tf.reduce_max(tf.abs(weight), axis=1)
+        num = tf.reduce_sum(w) + 1e-5
+        entropy = alpha * \
+            tf.reduce_sum(probs * tf.log(probs), axis=1, keepdims=True)
+        r_loss = tf.reduce_sum(tf.reduce_sum(
+            (u + v + entropy) * probs, axis=1) * w, axis=0) / num
+        u_loss = tf.reduce_sum(tf.reduce_sum(
+            u * probs + entropy, axis=1) * w, axis=0) / num
+        return r_loss, u_loss

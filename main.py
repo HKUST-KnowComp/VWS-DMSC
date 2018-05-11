@@ -1,5 +1,6 @@
 import os
 import random
+from itertools import chain
 import tensorflow as tf
 import numpy as np
 from model import Model
@@ -14,12 +15,8 @@ def train(config):
     asp_word2idx, asp_emb = load_embedding(config, config.asp_emb)
     query_emb = load_query(config, config.aspect_seeds, word2idx, emb)
 
-    if config.overall and not config.unsupervised:
+    if config.overall:
         query_emb = np.reshape(query_emb, [1, -1, config.emb_dim])
-        config.num_aspects = 1
-
-    if config.unsupervised:
-        query_emb = np.asarray([query_emb[config.aspect]])
         config.num_aspects = 1
 
     print("Building Batches")
@@ -27,11 +24,15 @@ def train(config):
         config, config.train, word2idx, asp_word2idx, filter_null=config.unsupervised)))
     dev_batch_list = list(batch_generator(config, load_corpus(
         config, config.dev, word2idx, asp_word2idx)))
+    test_batch_list = list(batch_generator(config, load_corpus(
+        config, config.test, word2idx, asp_word2idx)))
 
     random.shuffle(train_batch_list)
     random.shuffle(dev_batch_list)
+    random.shuffle(test_batch_list)
     num_train_batch = len(train_batch_list)
     num_dev_batch = len(dev_batch_list)
+    num_test_batch = len(test_batch_list)
 
     input_types = (tf.int32, tf.float32, tf.float32, tf.float32, tf.int32,
                    tf.int32, tf.int32, tf.int32, tf.float32, tf.int32)
@@ -42,6 +43,8 @@ def train(config):
         train_batch_list), input_types, input_shapes).repeat().shuffle(config.cache_size).make_one_shot_iterator()
     dev_batch = tf.data.Dataset.from_generator(list_wrapper(
         dev_batch_list), input_types, input_shapes).repeat().make_one_shot_iterator()
+    test_batch = tf.data.Dataset.from_generator(list_wrapper(
+        test_batch_list), input_types, input_shapes).repeat().make_one_shot_iterator()
 
     handle = tf.placeholder(tf.string, shape=[])
     batch = tf.data.Iterator.from_string_handle(
@@ -56,16 +59,16 @@ def train(config):
         sess.run(tf.global_variables_initializer())
         train_handle = sess.run(train_batch.string_handle())
         dev_handle = sess.run(dev_batch.string_handle())
+        test_handle = sess.run(test_batch.string_handle())
         saver = tf.train.Saver(var_list=model.var_to_save,
                                max_to_keep=config.max_to_keep)
         if config.unsupervised:
             saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
-        train_op = model.r_train_op if config.unsupervised else model.train_op
         sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
         best_val_acc = 0.
         for _ in tqdm(range(1, num_train_batch * config.num_epochs + 1), ascii=True):
             global_step = sess.run(model.global_step) + 1
-            loss, _ = sess.run([model.loss, train_op],
+            loss, _ = sess.run([model.t_loss, model.train_op],
                                feed_dict={handle: train_handle})
 
             if global_step % config.record_period == 0:
@@ -77,22 +80,23 @@ def train(config):
             if global_step % config.eval_period == 0:
                 sess.run(tf.assign(model.is_train,
                                    tf.constant(False, dtype=tf.bool)))
-                _, _, summ = evaluate(
+                _, _, train_summ = evaluate(
                     config, model, config.num_batches, sess, handle, train_handle, tag="train")
-                for s in summ:
-                    writer.add_summary(s, global_step)
-                _, val_acc, summ = evaluate(
+                _, val_acc, dev_summ = evaluate(
                     config, model, num_dev_batch, sess, handle, dev_handle, tag="dev")
+                _, _, test_summ = evaluate(
+                    config, model, num_test_batch, sess, handle, test_handle, tag="test")
+                for s in chain(train_summ, dev_summ, test_summ):
+                    writer.add_summary(s, global_step)
                 sess.run(tf.assign(model.is_train,
                                    tf.constant(True, dtype=tf.bool)))
-                for s in summ:
-                    writer.add_summary(s, global_step)
                 writer.flush()
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
-                    filename = os.path.join(
-                        config.save_dir, "model_{}.ckpt".format(global_step))
-                    saver.save(sess, filename)
+                    if not config.unsupervised:
+                        filename = os.path.join(
+                            config.save_dir, "model_{}.ckpt".format(global_step))
+                        saver.save(sess, filename)
 
 
 def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
@@ -104,7 +108,7 @@ def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
     preds = []
     for _ in range(num_batches):
         loss, pred, ay = sess.run(
-            [model.loss, model.pred, model.ay], feed_dict={handle: str_handle})
+            [model.t_loss, model.pred, model.ay], feed_dict={handle: str_handle})
         mean_loss += loss
         golden = np.asarray([[np.argmax(col) if any([k > 0 for k in col]) else -
                               1 for col in ay[i]] for i in range(num_aspects)], dtype=np.int32)
@@ -117,18 +121,16 @@ def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
     if config.unsupervised:
         m = Munkres()
         scale = config.score_scale
-        tots = (golden != -1).sum(axis=1).astype(np.float32)
-        cors = []
-        for i in range(num_aspects):
-            confusion_mat = np.zeros([scale, scale], dtype=np.int32)
-            for j, k in zip(range(scale), range(scale)):
-                confusion_mat[j, k] = - \
-                    np.logical_and(golden[i] == j, pred[i] == k).sum()
-            idxs = m.compute(confusion_mat.tolist())
-            t = 0
-            for r, c in idxs:
-                t -= confusion_mat[r][c]
-            cors.append(t)
+        aspect = config.aspect
+        tots = (golden[aspect] != -1).sum().astype(np.float32)
+        confusion_mat = np.zeros([scale, scale], dtype=np.int32)
+        for j, k in zip(range(scale), range(scale)):
+            confusion_mat[j, k] = - \
+                np.logical_and(golden[aspect] == j, pred[0] == k).sum()
+        idxs = m.compute(confusion_mat.tolist())
+        cors = 0.
+        for r, c in idxs:
+            cors -= confusion_mat[r][c]
         cors = np.asarray(cors, dtype=np.float32)
 
     else:
@@ -145,8 +147,9 @@ def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
         value=[tf.Summary.Value(tag="{}/acc".format(tag), simple_value=overall_acc)])
     summ.append(loss_sum)
     summ.append(overall_acc_sum)
-    for i, acc in enumerate(accs):
-        acc_sum = tf.Summary(value=[tf.Summary.Value(
-            tag="{}/{}".format(tag, config.name_aspects[i]), simple_value=acc)])
-        summ.append(acc_sum)
+    if not config.unsupervised:
+        for i, acc in enumerate(accs):
+            acc_sum = tf.Summary(value=[tf.Summary.Value(
+                tag="{}/{}".format(tag, config.name_aspects[i]), simple_value=acc)])
+            summ.append(acc_sum)
     return mean_loss, overall_acc, summ
