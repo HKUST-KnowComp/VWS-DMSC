@@ -11,14 +11,16 @@ class Model:
         self.num_aspect = config.num_aspects
         self.is_train = tf.get_variable(
             "is_train", shape=[], dtype=tf.bool, trainable=False)
-        self.word_mat = tf.get_variable(
-            "word_mat", initializer=tf.constant(word_mat, dtype=tf.float32))
-        self.asp_word_mat = asp_word_mat
+        self.word_mat = tf.get_variable("word_mat", initializer=tf.constant(
+            word_mat, dtype=tf.float32), trainable=False)
+        self.asp_word_mat = tf.get_variable(
+            "asp_word_mat", initializer=tf.constant(asp_word_mat, dtype=tf.float32))
         self.query_mat = tf.get_variable(
             "query_mat", initializer=tf.constant(query_mat, dtype=tf.float32))
 
         self.ready()
 
+        self.vars = [self.query_mat]
         self.word_level_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="word_level")
         self.sent_level_vars = tf.get_collection(
@@ -27,20 +29,18 @@ class Model:
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="predict")
         self.decoder_vars = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, scope="decoder")
-        self.var_to_save = self.word_level_vars + self.sent_level_vars
+        self.var_to_save = self.word_level_vars + self.sent_level_vars + self.vars
 
         en_reg = tf.contrib.layers.l2_regularizer(config.en_l2_reg)
         de_reg = tf.contrib.layers.l2_regularizer(config.de_l2_reg)
         en_l2 = tf.contrib.layers.apply_regularization(
-            en_reg, self.word_level_vars + self.sent_level_vars)
+            en_reg, self.word_level_vars + self.sent_level_vars + self.vars)
         de_l2 = tf.contrib.layers.apply_regularization(
             de_reg, self.predict_vars + self.decoder_vars)
         self.l2_loss = en_l2 + de_l2
 
-        self.opt = tf.train.AdadeltaOptimizer(
-            learning_rate=config.learning_rate, epsilon=1e-6)
-        self.r_opt = tf.train.AdadeltaOptimizer(
-            learning_rate=config.learning_rate, epsilon=1e-6)
+        self.opt = tf.train.AdadeltaOptimizer(config.learning_rate)
+        self.r_opt = tf.train.AdadeltaOptimizer(config.learning_rate)
         self.train_op = self.opt.minimize(
             self.loss + self.l2_loss, global_step=self.global_step)
         self.r_train_op = self.r_opt.minimize(
@@ -96,13 +96,11 @@ class Model:
                     losses.append(tf.reduce_mean(loss))
             self.probs = tf.stack(probs, axis=0)
             self.pred = tf.stack(preds, axis=0)
-            self.loss = tf.reduce_mean(losses)
+            self.loss = tf.reduce_sum(losses)
 
         with tf.variable_scope("decoder"):
-            emb = tf.get_variable("emb", initializer=tf.constant(
-                asp_word_mat, dtype=tf.float32))
-            sent_emb = tf.nn.embedding_lookup(emb, senti)
-            neg_sent_emb = tf.nn.embedding_lookup(emb, neg_senti)
+            sent_emb = tf.nn.embedding_lookup(asp_word_mat, senti)
+            neg_sent_emb = tf.nn.embedding_lookup(asp_word_mat, neg_senti)
             with tf.variable_scope("selectional_preference", reuse=tf.AUTO_REUSE):
                 w = tf.expand_dims(weight, axis=2)
                 u = dense(sent_emb, score_scale, use_bias=False)

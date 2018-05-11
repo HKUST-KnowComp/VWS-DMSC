@@ -34,12 +34,12 @@ flags.DEFINE_float("alpha", 0.1, "")
 flags.DEFINE_integer("emb_dim", 200, "dimension of embedding matrix")
 flags.DEFINE_integer("hidden", 200, "hidden dimension")
 
-flags.DEFINE_integer("cache_size", 5000, "size of dataset buffer")
+flags.DEFINE_integer("cache_size", 500, "size of dataset buffer")
 flags.DEFINE_string("log_dir", "log/", "directory for saving log")
 flags.DEFINE_string("save_dir", "model/", "directory for saving model")
 
 flags.DEFINE_integer("record_period", 100, "record loss every period")
-flags.DEFINE_integer("eval_period", 2000, "evaluate on dev every period")
+flags.DEFINE_integer("eval_period", 1000, "evaluate on dev every period")
 flags.DEFINE_integer("num_epochs", 50, "maximum number of epochs")
 flags.DEFINE_integer("num_batches", 200, "number of batches in evaluation")
 

@@ -1,7 +1,5 @@
 import tensorflow as tf
 
-INF = 1e20
-
 
 def cudnn_lstm(inputs, num_units, sequence_length=None, scope="cudnn_lstm"):
     with tf.variable_scope(scope):
@@ -43,20 +41,15 @@ def dense(inputs, hidden, use_bias=True, scope="dense"):
         return res
 
 
-def dropout(args, keep_prob, is_train, mode=None):
+def dropout(args, keep_prob, is_train):
     if keep_prob < 1.0:
-        noise_shape = None
-        scale = 1.0
-        shape = tf.shape(args)
-        if mode == "recurrent" and len(args.get_shape().as_list()) == 3:
-            noise_shape = [shape[0], 1, shape[-1]]
         args = tf.cond(is_train, lambda: tf.nn.dropout(
-            args, keep_prob, noise_shape=noise_shape) * scale, lambda: args)
+            args, keep_prob), lambda: args)
     return args
 
 
 def softmax_mask(val, mask):
-    return -INF * (1 - tf.cast(mask, tf.float32)) + val
+    return -1e30 * (1 - mask) + val
 
 
 def iter_attention(query, doc, mask=None, hop=1, scope="iter"):

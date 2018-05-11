@@ -62,6 +62,7 @@ def train(config):
             saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
         train_op = model.r_train_op if config.unsupervised else model.train_op
         sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
+        best_val_acc = 0.
         for _ in tqdm(range(1, num_train_batch * config.num_epochs + 1), ascii=True):
             global_step = sess.run(model.global_step) + 1
             loss, _ = sess.run([model.loss, train_op],
@@ -80,16 +81,18 @@ def train(config):
                     config, model, config.num_batches, sess, handle, train_handle, tag="train")
                 for s in summ:
                     writer.add_summary(s, global_step)
-                _, _, summ = evaluate(
+                _, val_acc, summ = evaluate(
                     config, model, num_dev_batch, sess, handle, dev_handle, tag="dev")
                 sess.run(tf.assign(model.is_train,
                                    tf.constant(True, dtype=tf.bool)))
                 for s in summ:
                     writer.add_summary(s, global_step)
                 writer.flush()
-                filename = os.path.join(
-                    config.save_dir, "model_{}.ckpt".format(global_step))
-                saver.save(sess, filename)
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    filename = os.path.join(
+                        config.save_dir, "model_{}.ckpt".format(global_step))
+                    saver.save(sess, filename)
 
 
 def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
@@ -146,4 +149,4 @@ def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
         acc_sum = tf.Summary(value=[tf.Summary.Value(
             tag="{}/{}".format(tag, config.name_aspects[i]), simple_value=acc)])
         summ.append(acc_sum)
-    return mean_loss, accs, summ
+    return mean_loss, overall_acc, summ
