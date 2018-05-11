@@ -91,9 +91,9 @@ class Model:
             self.pred = tf.argmax(self.prob, axis=2)
 
             if not config.unsupervised:
-                target = self.y if config.overall else self.ay
+                self.golden = self.y if config.overall else self.ay
                 self.loss = tf.reduce_sum(tf.reduce_mean(
-                    tf.reduce_sum(-target * tf.log(self.prob + 1e-5), axis=2), axis=1))
+                    tf.reduce_sum(-self.golden * tf.log(self.prob + 1e-5), axis=2), axis=1))
 
         with tf.variable_scope("decoder"):
             sent_emb = tf.nn.embedding_lookup(asp_word_mat, senti)

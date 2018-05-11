@@ -108,7 +108,7 @@ def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
     preds = []
     for _ in range(num_batches):
         loss, pred, ay = sess.run(
-            [model.t_loss, model.pred, model.ay], feed_dict={handle: str_handle})
+            [model.t_loss, model.pred, model.golden], feed_dict={handle: str_handle})
         mean_loss += loss
         golden = np.asarray([[np.argmax(col) if any([k > 0 for k in col]) else -
                               1 for col in ay[i]] for i in range(num_aspects)], dtype=np.int32)
