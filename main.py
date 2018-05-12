@@ -7,7 +7,7 @@ from model import Model
 from util.batch_gen import batch_generator, list_wrapper
 from util.load import load_corpus, load_query, load_embedding
 from tqdm import tqdm
-from munkres import Munkres
+from evaluator import Evaluator
 
 
 def train(config):
@@ -46,6 +46,10 @@ def train(config):
     test_batch = tf.data.Dataset.from_generator(list_wrapper(
         test_batch_list), input_types, input_shapes).repeat().make_one_shot_iterator()
 
+    train_evaluator = Evaluator()
+    dev_evaluator = Evaluator()
+    test_evaluator = Evaluator()
+
     handle = tf.placeholder(tf.string, shape=[])
     batch = tf.data.Iterator.from_string_handle(
         handle, train_batch.output_types, train_batch.output_shapes)
@@ -80,12 +84,12 @@ def train(config):
             if global_step % config.eval_period == 0:
                 sess.run(tf.assign(model.is_train,
                                    tf.constant(False, dtype=tf.bool)))
-                _, _, train_summ = evaluate(
+                _, _, train_summ = train_evaluator(
                     config, model, config.num_batches, sess, handle, train_handle, tag="train")
-                _, val_acc, dev_summ = evaluate(
-                    config, model, num_dev_batch, sess, handle, dev_handle, tag="dev")
-                _, _, test_summ = evaluate(
-                    config, model, num_test_batch, sess, handle, test_handle, tag="test")
+                _, val_acc, dev_summ = dev_evaluator(
+                    config, model, num_dev_batch, sess, handle, dev_handle, tag="dev", flip=True)
+                _, _, test_summ = test_evaluator(
+                    config, model, num_test_batch, sess, handle, test_handle, tag="test", flip=True)
                 for s in chain(train_summ, dev_summ, test_summ):
                     writer.add_summary(s, global_step)
                 sess.run(tf.assign(model.is_train,
@@ -97,59 +101,3 @@ def train(config):
                         filename = os.path.join(
                             config.save_dir, "model_{}.ckpt".format(global_step))
                         saver.save(sess, filename)
-
-
-def evaluate(config, model, num_batches, sess, handle, str_handle, tag="train"):
-    num_aspects = config.num_aspects
-    scale = config.score_scale
-
-    mean_loss = 0.
-    goldens = []
-    preds = []
-    for _ in range(num_batches):
-        loss, pred, ay = sess.run(
-            [model.t_loss, model.pred, model.golden], feed_dict={handle: str_handle})
-        mean_loss += loss
-        golden = np.asarray([[np.argmax(col) if any([k > 0 for k in col]) else -
-                              1 for col in ay[i]] for i in range(num_aspects)], dtype=np.int32)
-        goldens.append(golden)
-        preds.append(pred)
-    golden = np.concatenate(goldens, axis=1)
-    pred = np.concatenate(preds, axis=1)
-    mean_loss = mean_loss / config.num_batches
-
-    if config.unsupervised:
-        m = Munkres()
-        scale = config.score_scale
-        aspect = config.aspect
-        tots = (golden[aspect] != -1).sum().astype(np.float32)
-        confusion_mat = np.zeros([scale, scale], dtype=np.int32)
-        for j, k in zip(range(scale), range(scale)):
-            confusion_mat[j, k] = - \
-                np.logical_and(golden[aspect] == j, pred[0] == k).sum()
-        idxs = m.compute(confusion_mat.tolist())
-        cors = 0.
-        for r, c in idxs:
-            cors -= confusion_mat[r][c]
-        cors = np.asarray(cors, dtype=np.float32)
-
-    else:
-        tots = (golden != -1).sum(axis=1).astype(np.float32)
-        cors = (golden == pred).sum(axis=1).astype(np.float32)
-
-    accs = (cors / tots).tolist()
-    overall_acc = cors.sum() / tots.sum()
-
-    summ = []
-    loss_sum = tf.Summary(value=[tf.Summary.Value(
-        tag="{}/loss".format(tag), simple_value=mean_loss), ])
-    overall_acc_sum = tf.Summary(
-        value=[tf.Summary.Value(tag="{}/acc".format(tag), simple_value=overall_acc)])
-    summ.append(loss_sum)
-    summ.append(overall_acc_sum)
-    if not config.unsupervised:
-        for i, acc in enumerate(accs):
-            acc_sum = tf.Summary(value=[tf.Summary.Value(
-                tag="{}/{}".format(tag, config.name_aspects[i]), simple_value=acc)])
-            summ.append(acc_sum)
-    return mean_loss, overall_acc, summ
