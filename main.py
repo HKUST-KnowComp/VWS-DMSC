@@ -2,7 +2,6 @@ import os
 import random
 from itertools import chain
 import tensorflow as tf
-import numpy as np
 from model import Model
 from util.batch_gen import batch_generator, list_wrapper
 from util.load import load_corpus, load_query, load_embedding
@@ -16,7 +15,6 @@ def train(config):
     query_emb = load_query(config, config.aspect_seeds, word2idx, emb)
 
     if config.overall:
-        query_emb = np.reshape(query_emb, [1, -1, config.emb_dim])
         config.num_aspects = 1
 
     print("Building Batches")

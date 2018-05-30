@@ -55,6 +55,8 @@ class Model:
         num_aspect = self.num_aspect
         score_scale = config.score_scale
         batch = tf.floordiv(tf.shape(x)[0], num_sent)
+        query_mat = tf.reshape(
+            query_mat, [config.num_aspects, -1, config.emb_dim])
 
         with tf.variable_scope("word_level"):
             x = dropout(tf.nn.embedding_lookup(word_mat, x),
@@ -93,10 +95,10 @@ class Model:
             if not config.unsupervised:
                 self.golden = self.y if config.overall else self.ay
                 self.loss = tf.reduce_sum(tf.reduce_mean(
-                    tf.reduce_sum(-self.golden * tf.log(self.prob + 1e-5), axis=2), axis=1))
+                    tf.reduce_sum(-self.golden * tf.log(self.prob + 1e-6), axis=2), axis=1))
 
         with tf.variable_scope("decoder"):
             sent_emb = tf.nn.embedding_lookup(asp_word_mat, senti)
             neg_sent_emb = tf.nn.embedding_lookup(asp_word_mat, neg_senti)
             self.r_loss, self.u_loss = selectional_preference(
-                sent_emb, neg_sent_emb, weight, self.prob[0], score_scale, alpha=config.alpha, norm=config.norm, num_head=config.num_head)
+                sent_emb, neg_sent_emb, weight, self.prob[0], score_scale, alpha=config.alpha)

@@ -49,8 +49,12 @@ def create_one_batch(arg, ids, corpus):
             asp_ = [asp[i][val] for val in ran_val]
             senti_ = [senti[i][val] for val in ran_val]
             weight_ = [weight[i][val] for val in ran_val]
-            neg_senti_ = [senti_words.sample(
-                min_count=arg.min_count) for _ in range(arg.neg_num)]
+            neg_senti_ = []
+            for _ in range(arg.neg_num):
+                rand_senti = senti_[0]
+                while rand_senti in senti_:
+                    rand_senti = senti_words.sample(min_count=arg.min_count)
+                neg_senti_.append(rand_senti)
 
         else:
             asp_ = [0 for _ in range(arg.num_senti)]
