@@ -22,8 +22,7 @@ flags.DEFINE_string("asp_emb", "data/tripadvisor/ret_emb",
                     "path to pre-trained aspect embedding")
 
 
-flags.DEFINE_integer("batch_size", 3, "mini-batch size")
-flags.DEFINE_integer("test_batch_size", 32, "mini-batch size for test")
+flags.DEFINE_integer("batch_size", 8, "mini-batch size")
 flags.DEFINE_float("keep_prob", 0.7, "dropout rate")
 flags.DEFINE_integer("hop_word", 4, "hop for word level")
 flags.DEFINE_integer("hop_sent", 2, "hop for sentence level")
@@ -41,14 +40,14 @@ flags.DEFINE_string("save_dir", "model/tripadvisor/",
 
 flags.DEFINE_integer("record_period", 100, "record loss every period")
 flags.DEFINE_integer("eval_period", 1000, "evaluate on dev every period")
-flags.DEFINE_integer("num_epochs", 20, "maximum number of epochs")
+flags.DEFINE_integer("num_epochs", 10, "maximum number of epochs")
 flags.DEFINE_integer("num_batches", 200, "number of batches in evaluation")
 
 flags.DEFINE_integer("score_scale", 2, "score scale")
 flags.DEFINE_integer("num_senti", 5, "number of sentiment word in sampling")
 flags.DEFINE_integer("neg_num", 50, "number of negative sampling")
 flags.DEFINE_integer("min_count", 3, "min count in batches creation")
-flags.DEFINE_boolean("overall", False, "whether to use overall")
+flags.DEFINE_boolean("overall", True, "whether to use overall")
 flags.DEFINE_boolean("unsupervised", False,
                      "whether to use unsupervised method")
 flags.DEFINE_integer("max_to_keep", 5, "number of models to save")
