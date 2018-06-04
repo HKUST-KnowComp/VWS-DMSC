@@ -92,10 +92,9 @@ class Model:
             self.prob = tf.stack(probs, axis=0)
             self.pred = tf.argmax(self.prob, axis=2)
 
-            if not config.unsupervised:
-                self.golden = self.y if config.overall else self.ay
-                self.loss = tf.reduce_sum(tf.reduce_mean(
-                    tf.reduce_sum(-self.golden * tf.log(self.prob + 1e-6), axis=2), axis=1))
+            self.golden = self.y if config.overall else self.ay
+            self.loss = tf.reduce_sum(tf.reduce_mean(
+                tf.reduce_sum(-self.golden * tf.log(self.prob + 1e-6), axis=2), axis=1))
 
         with tf.variable_scope("decoder"):
             sent_emb = tf.nn.embedding_lookup(asp_word_mat, senti)

@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from itertools import product
 from munkres import Munkres
 
 
@@ -28,13 +29,13 @@ class Evaluator:
 
         if config.unsupervised:
             m = Munkres()
-            scale = config.score_scale
             aspect = config.aspect
+            scale = config.score_scale
             tots = (golden[aspect] != -1).sum().astype(np.float32)
             confusion_mat = np.zeros([scale, scale], dtype=np.int32)
-            for j, k in zip(range(scale), range(scale)):
+            for j, k in product(range(scale), range(scale)):
                 confusion_mat[j, k] = - \
-                    np.logical_and(golden[aspect] == j, pred[0] == k).sum()
+                    (np.logical_and(golden[aspect] == j, pred[0] == k).sum())
             idxs = m.compute(confusion_mat.tolist())
             cors = 0.
             for r, c in idxs:

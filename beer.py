@@ -47,8 +47,8 @@ flags.DEFINE_integer("score_scale", 2, "score scale")
 flags.DEFINE_integer("num_senti", 5, "number of sentiment word in sampling")
 flags.DEFINE_integer("neg_num", 50, "number of negative sampling")
 flags.DEFINE_integer("min_count", 3, "min count in batches creation")
-flags.DEFINE_boolean("overall", True, "whether to use overall")
-flags.DEFINE_boolean("unsupervised", False,
+flags.DEFINE_boolean("overall", False, "whether to use overall")
+flags.DEFINE_boolean("unsupervised", True,
                      "whether to use unsupervised method")
 flags.DEFINE_integer("max_to_keep", 5, "number of models to save")
 

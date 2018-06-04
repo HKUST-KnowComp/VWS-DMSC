@@ -41,6 +41,14 @@ def dense(inputs, hidden, use_bias=True, scope="dense"):
         return res
 
 
+def highway(inputs, activation=tf.nn.relu, scope="highway"):
+    with tf.variable_scope(scope):
+        dim = inputs.get_shape().as_list()[-1]
+        gate = tf.nn.sigmoid(dense(inputs, dim, scope="gate"))
+        trans = activation(dense(inputs, dim, scope="trans"))
+        return trans * gate + inputs * (1 - gate)
+
+
 def dropout(args, keep_prob, is_train):
     if keep_prob < 1.0:
         args = tf.cond(is_train, lambda: tf.nn.dropout(

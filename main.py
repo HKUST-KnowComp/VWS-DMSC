@@ -68,7 +68,7 @@ def train(config):
             saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
         sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
         best_val_acc = 0.
-        for _ in tqdm(range(1, num_train_batch * config.num_epochs + 1), ascii=True):
+        for _ in tqdm(range(1, num_train_batch * config.num_epochs + 1)):
             global_step = sess.run(model.global_step) + 1
             loss, _ = sess.run([model.t_loss, model.train_op],
                                feed_dict={handle: train_handle})
