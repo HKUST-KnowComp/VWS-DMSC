@@ -7,13 +7,12 @@ def load_query(config, path, word2idx_dict, emb):
     mat = []
     with open(path, "r", encoding="iso-8859-1") as fh:
         for line in fh:
-            mat.append([emb[word2idx_dict[seed]]
-                        for seed in line.strip().split()])
+            mat.append([emb[word2idx_dict[seed]] for seed in line.strip().split()])
     return np.array(mat, dtype=np.float32)
 
 
 def load_corpus(config, path, embedding, asp_embedding, filter_null=False):
-    aspect = config.aspect
+    aspect = config.aspect + 1
 
     with open(path, "r", encoding="iso-8859-1") as fh:
         lines = fh.readlines()
@@ -24,8 +23,7 @@ def load_corpus(config, path, embedding, asp_embedding, filter_null=False):
     tmp_x = list(map(lambda doc: filter(lambda sent: sent, doc), tmp_x))
     tmp_asp = [seg[1].split('\t\t') for seg in segs]
     tmp_asp = list(map(lambda doc: filter(lambda asp: asp, doc), tmp_asp))
-    asp_senti = list(map(lambda doc: list(
-        map(lambda asp: asp.strip().split('\t'), doc)), tmp_asp))
+    asp_senti = list(map(lambda doc: list(map(lambda asp: asp.strip().split('\t'), doc)), tmp_asp))
 
     asp = []
     senti = []
@@ -46,7 +44,7 @@ def load_corpus(config, path, embedding, asp_embedding, filter_null=False):
                 senti_ = senti.split()[0].strip()
                 wei_ = -1.
             if senti == "no":
-                senti_ = aspect
+                senti_ = asp_
                 wei_ = -1.
             if asp_ in asp_embedding and senti_ in asp_embedding:
                 sample_asp.append(asp_embedding[asp_])
@@ -59,10 +57,8 @@ def load_corpus(config, path, embedding, asp_embedding, filter_null=False):
         weight.append(sample_weight)
         valid.append(sample_valid)
 
-    corpus_x = list(map(lambda doc: list(map(
-        lambda sent: [embedding[word] for word in sent.strip().split()], doc)), tmp_x))
-    corpus_y = list(map(lambda seg: list(map(lambda rating: int(
-        rating) - 1, seg[0].strip().split())), segs))
+    corpus_x = list(map(lambda doc: list(map(lambda sent: [embedding[word] for word in sent.strip().split()], doc)), tmp_x))
+    corpus_y = list(map(lambda seg: list(map(lambda rating: int(rating) - 1, seg[0].strip().split())), segs))
 
     if filter_null:
         corpus_x = [corpus_x[i] for i, v in enumerate(valid) if v is True]

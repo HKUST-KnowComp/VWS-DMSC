@@ -9,17 +9,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 flags.DEFINE_integer("aspect", 0, "aspect to use in unsupervised learning")
 flags.DEFINE_integer("num_aspects", 7, "total number of aspects")
-flags.DEFINE_list("name_aspects", ["value", "room", "location",
-                                   "cleaness", "check-in", "service", "business"], "name of aspects")
-flags.DEFINE_string(
-    "aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
+flags.DEFINE_list("name_aspects", ["value", "room", "location", "cleaness", "check-in", "service", "business"], "name of aspects")
+flags.DEFINE_string("aspect_seeds", "data/tripadvisor/aspect.words", "path to aspect seeds")
 flags.DEFINE_string("train", "data/tripadvisor/train", "path to train data")
 flags.DEFINE_string("dev", "data/tripadvisor/dev", "path to dev data")
 flags.DEFINE_string("test", "data/tripadvisor/test", "path to test data")
-flags.DEFINE_string("emb", "data/tripadvisor/emb",
-                    "path to pre-trained embedding")
-flags.DEFINE_string("asp_emb", "data/tripadvisor/ret_emb",
-                    "path to pre-trained aspect embedding")
+flags.DEFINE_string("emb", "data/tripadvisor/emb", "path to pre-trained embedding")
+flags.DEFINE_string("asp_emb", "data/tripadvisor/ret_emb", "path to pre-trained aspect embedding")
 
 
 flags.DEFINE_integer("batch_size", 8, "mini-batch size")
@@ -35,8 +31,7 @@ flags.DEFINE_integer("hidden", 200, "hidden dimension")
 
 flags.DEFINE_integer("cache_size", 500, "size of dataset buffer")
 flags.DEFINE_string("log_dir", "log/tripadvisor/", "directory for saving log")
-flags.DEFINE_string("save_dir", "model/tripadvisor/",
-                    "directory for saving model")
+flags.DEFINE_string("save_dir", "model/tripadvisor/", "directory for saving model")
 
 flags.DEFINE_integer("record_period", 100, "record loss every period")
 flags.DEFINE_integer("eval_period", 1000, "evaluate on dev every period")
@@ -48,8 +43,7 @@ flags.DEFINE_integer("num_senti", 5, "number of sentiment word in sampling")
 flags.DEFINE_integer("neg_num", 50, "number of negative sampling")
 flags.DEFINE_integer("min_count", 3, "min count in batches creation")
 flags.DEFINE_boolean("overall", False, "whether to use overall")
-flags.DEFINE_boolean("unsupervised", True,
-                     "whether to use unsupervised method")
+flags.DEFINE_boolean("unsupervised", True, "whether to use unsupervised method")
 flags.DEFINE_integer("max_to_keep", 5, "number of models to save")
 
 
