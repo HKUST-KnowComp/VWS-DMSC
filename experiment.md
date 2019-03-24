@@ -22,8 +22,3 @@ a = the number of correct predictions
 b = the number of total samples
 
 avg = \sum_{i=aspect}{a_i} / \sum_{i=aspect}{b_i}
-
-10195
-13527
-10000
-13439
