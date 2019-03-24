@@ -5,7 +5,6 @@ from main import train
 
 flags = tf.flags
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 flags.DEFINE_integer("aspect", 0, "aspect to use in unsupervised learning")
 flags.DEFINE_integer("num_aspects", 7, "total number of aspects")
