@@ -6,6 +6,7 @@ class Model:
     def __init__(self, config, batch, word_mat, asp_word_mat, query_mat):
         self.config = config
         self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32, initializer=tf.constant_initializer(0), trainable=False)
+        self.lr = tf.get_variable("lr", [], initializer=tf.constant_initializer(config.learning_rate), trainable=False)
         self.x, self.y, self.ay, self.w_mask, self.w_len, self.sent_num, self.asp, self.senti, self.weight, self.neg_senti = batch.get_next()
         self.num_aspect = config.num_aspects
         self.is_train = tf.get_variable("is_train", shape=[], dtype=tf.bool, trainable=False)
@@ -32,7 +33,7 @@ class Model:
 
         self.t_loss = self.r_loss + un_l2 if config.unsupervised else self.loss + sup_l2
         var_list = un_vars + [self.asp_word_mat] if config.unsupervised else None
-        self.opt = tf.train.AdadeltaOptimizer(config.learning_rate)
+        self.opt = tf.train.AdadeltaOptimizer(self.lr)
         self.train_op = self.opt.minimize(self.t_loss, global_step=self.global_step, var_list=var_list)
 
     def ready(self):

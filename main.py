@@ -63,7 +63,7 @@ def train(config):
             saver.restore(sess, tf.train.latest_checkpoint(config.save_dir))
         sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
         best_val_acc, best_test_acc = 0., 0.
-        for _ in tqdm(range(1, num_train_batch * config.num_epochs + 1)):
+        for epoch in tqdm(range(1, num_train_batch * config.num_epochs + 1)):
             global_step = sess.run(model.global_step) + 1
             loss, _ = sess.run([model.t_loss, model.train_op], feed_dict={handle: train_handle})
 
@@ -86,4 +86,6 @@ def train(config):
                     if not config.unsupervised:
                         filename = os.path.join(config.save_dir, "model_{}.ckpt".format(global_step))
                         saver.save(sess, filename)
+                elif epoch >= 10:
+                    sess.run(tf.assign(model.lr, model.lr * config.lr_decay))
         print("Dev Acc {}, Test Acc {}".format(best_val_acc, best_test_acc))
