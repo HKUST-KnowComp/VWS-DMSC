@@ -68,14 +68,12 @@ def train(config):
             loss, _ = sess.run([model.t_loss, model.train_op], feed_dict={handle: train_handle})
 
             if global_step % config.record_period == 0:
-                loss_sum = tf.Summary(value=[tf.Summary.Value(
-                    tag="model/loss", simple_value=loss), ])
+                loss_sum = tf.Summary(value=[tf.Summary.Value(tag="model/loss", simple_value=loss), ])
                 writer.add_summary(loss_sum, global_step)
                 writer.flush()
 
             if global_step % config.eval_period == 0:
-                sess.run(tf.assign(model.is_train,
-                                   tf.constant(False, dtype=tf.bool)))
+                sess.run(tf.assign(model.is_train, tf.constant(False, dtype=tf.bool)))
                 _, _, train_summ = train_evaluator(config, model, config.num_batches, sess, handle, train_handle, tag="train")
                 _, val_acc, dev_summ = dev_evaluator(config, model, num_dev_batch, sess, handle, dev_handle, tag="dev", flip=True)
                 _, test_acc, test_summ = test_evaluator(config, model, num_test_batch, sess, handle, test_handle, tag="test", flip=True)
@@ -88,4 +86,4 @@ def train(config):
                     if not config.unsupervised:
                         filename = os.path.join(config.save_dir, "model_{}.ckpt".format(global_step))
                         saver.save(sess, filename)
-        print("Acc {}".format(best_test_acc))
+        print("Dev Acc {}, Test Acc {}".format(best_val_acc, best_test_acc))
