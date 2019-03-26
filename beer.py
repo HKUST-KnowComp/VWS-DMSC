@@ -35,7 +35,7 @@ flags.DEFINE_string("save_dir", "model/beer/", "directory for saving model")
 
 flags.DEFINE_integer("record_period", 100, "record loss every period")
 flags.DEFINE_integer("eval_period", 1000, "evaluate on dev every period")
-flags.DEFINE_integer("num_epochs", 30, "maximum number of epochs")
+flags.DEFINE_integer("num_epochs", 10, "maximum number of epochs")
 flags.DEFINE_integer("num_batches", 200, "number of batches in evaluation")
 
 flags.DEFINE_integer("score_scale", 2, "score scale")
