@@ -8,11 +8,11 @@
     * munkres
 
 ## Usage
-To predict the sentiment on tripadvisor/beer on aspect 0 (could be 0-6), run
+To predict the sentiment on tripadvisor on aspect 0 (could be 0-6), run
 ```bash
 python tripadvisor.py --aspect 0
 ```
-To predict the sentiment on beeradvocate on aspect 0 (could be 0-3), run
+To predict the sentiment on beer on aspect 0 (could be 0-3), run
 ```bash
 python beer.py --aspect 0
 ```
