@@ -1,5 +1,5 @@
 # VWS-DMSC
-  * Source code for NAACL 2019 paper [A Variational Approach to Weakly Supervised Document-Level Multi-Aspect Sentiment Classification].
+  * Source code for NAACL 2019 paper **A Variational Approach to Weakly Supervised Document-Level Multi-Aspect Sentiment Classification**
 
 ## Requirements
     * Python3
