@@ -62,4 +62,4 @@ class Evaluator:
             self.last_round = pred
             flip_summ = tf.Summary(value=[tf.Summary.Value(tag="{}/flip".format(tag), simple_value=flip)])
             summ.append(flip_summ)
-        return mean_loss, overall_acc, summ
+        return mean_loss, overall_acc, summ, int(cors.sum()), int(tots.sum())

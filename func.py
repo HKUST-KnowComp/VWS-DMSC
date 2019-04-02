@@ -85,7 +85,7 @@ def iter_attention(query, doc, mask=None, hop=1, scope="iter"):
         return tf.concat(ress, axis=2)
 
 
-def selectional_preference(sent_emb, neg_sent_emb, weight, probs, score_scale, alpha=0., head=5, scale=0.1):
+def selectional_preference(sent_emb, neg_sent_emb, weight, probs, score_scale, alpha=0., scale=0.1):
 
     def linear(inputs, W):
         shape = tf.shape(inputs)
@@ -99,14 +99,7 @@ def selectional_preference(sent_emb, neg_sent_emb, weight, probs, score_scale, a
     with tf.variable_scope("selectional_preference"):
         input_dim = sent_emb.get_shape().as_list()[-1]
 
-        # Multi
-        Ws = []
-        weights = tf.nn.softmax(tf.get_variable("weights", [head], initializer=tf.constant_initializer(0.)))
-        for i in range(head):
-            Ws += [tf.get_variable("W_{}".format(i), [input_dim, score_scale]) * weights[i]]
-        W = tf.add_n(Ws)
-
-        # Norm
+        W = tf.get_variable("W", [input_dim, score_scale])
         W_norm = tf.reduce_sum(tf.square(W), axis=0, keepdims=True)
         W = W / W_norm * tf.get_variable("scale", [], initializer=tf.constant_initializer(scale))
         w = tf.expand_dims(weight, axis=2)

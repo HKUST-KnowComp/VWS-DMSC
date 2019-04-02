@@ -10,6 +10,7 @@ from evaluator import Evaluator
 
 
 def train(config):
+    tf.set_random_seed(8888)
     word2idx, emb = load_embedding(config, config.emb)
     asp_word2idx, asp_emb = load_embedding(config, config.asp_emb)
     query_emb = load_query(config, config.aspect_seeds, word2idx, emb)
@@ -74,18 +75,20 @@ def train(config):
 
             if global_step % config.eval_period == 0:
                 sess.run(tf.assign(model.is_train, tf.constant(False, dtype=tf.bool)))
-                _, _, train_summ = train_evaluator(config, model, config.num_batches, sess, handle, train_handle, tag="train")
-                _, val_acc, dev_summ = dev_evaluator(config, model, num_dev_batch, sess, handle, dev_handle, tag="dev", flip=True)
-                _, test_acc, test_summ = test_evaluator(config, model, num_test_batch, sess, handle, test_handle, tag="test", flip=True)
+                _, _, train_summ, _, _ = train_evaluator(config, model, config.num_batches, sess, handle, train_handle, tag="train")
+                _, val_acc, dev_summ, dev_corr_pred, dev_total = dev_evaluator(config, model, num_dev_batch, sess, handle, dev_handle, tag="dev", flip=True)
+                _, test_acc, test_summ, test_corr_pred, test_total = test_evaluator(config, model, num_test_batch, sess, handle, test_handle, tag="test", flip=True)
                 for s in chain(train_summ, dev_summ, test_summ):
                     writer.add_summary(s, global_step)
                 sess.run(tf.assign(model.is_train, tf.constant(True, dtype=tf.bool)))
                 writer.flush()
                 if val_acc > best_val_acc:
                     best_val_acc, best_test_acc = val_acc, test_acc
+                    best_dev_corr_pred, best_test_corr_pred = dev_corr_pred, test_corr_pred
                     if not config.unsupervised:
                         filename = os.path.join(config.save_dir, "model_{}.ckpt".format(global_step))
                         saver.save(sess, filename)
                 elif epoch >= 10:
                     sess.run(tf.assign(model.lr, model.lr * config.lr_decay))
-        print("Dev Acc {}, Test Acc {}".format(best_val_acc, best_test_acc))
+        print("Dev Acc {:.4f} ({}/{})".format(best_val_acc,best_dev_corr_pred,dev_total))
+        print("Test Acc {:.4f} ({}/{})".format(best_test_acc, best_test_corr_pred, test_total))
