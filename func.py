@@ -11,13 +11,13 @@ def cudnn_lstm(inputs, num_units, sequence_length=None, scope="cudnn_lstm"):
         with tf.variable_scope("bw"):
             if sequence_length is not None:
                 inputs_bw = tf.reverse_sequence(
-                    inputs_fw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
+                    inputs_fw, seq_lengths=sequence_length, seq_axis=0, batch_axis=1)
             else:
                 inputs_bw = tf.reverse(inputs_fw, axis=[0])
             out_bw, _ = cell_bw(inputs_bw)
             if sequence_length is not None:
                 out_bw = tf.reverse_sequence(
-                    out_bw, seq_lengths=sequence_length, seq_dim=0, batch_dim=1)
+                    out_bw, seq_lengths=sequence_length, seq_axis=0, batch_axis=1)
             else:
                 out_bw = tf.reverse(out_bw, axis=[0])
         out = tf.transpose(tf.concat([out_fw, out_bw], axis=2), [1, 0, 2])
