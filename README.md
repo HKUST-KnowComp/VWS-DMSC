@@ -8,15 +8,16 @@
     * munkres
 
 ## Usage
-To predict the sentiment on tripadvisor on aspect 0 (could be 0-6), run
-```bash
-python tripadvisor.py --aspect 0
-```
-To predict the sentiment on beer on aspect 0 (could be 0-3), run
-```bash
-python beer.py --aspect 0
-```
-To Run all aspects on both dataset
+To predict the polarity of all aspects on both dataset
 ```bash
 sh test.sh
 ```
+To predict the polarity of aspect 0 (could be 0-6) on tripadvisor
+```bash
+python tripadvisor.py --aspect 0
+```
+To predict the polarity of aspect 0 (could be 0-3) on beer
+```bash
+python beer.py --aspect 0
+```
+
