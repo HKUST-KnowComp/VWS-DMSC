@@ -90,5 +90,5 @@ def train(config):
                         saver.save(sess, filename)
                 elif epoch >= 10:
                     sess.run(tf.assign(model.lr, model.lr * config.lr_decay))
-        print("Dev Acc {:.4f} ({}/{})".format(best_val_acc,best_dev_corr_pred,dev_total))
+        print("Dev Acc {:.4f} ({}/{})".format(best_val_acc, best_dev_corr_pred, dev_total))
         print("Test Acc {:.4f} ({}/{})".format(best_test_acc, best_test_corr_pred, test_total))

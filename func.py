@@ -100,7 +100,7 @@ def selectional_preference(sent_emb, neg_sent_emb, weight, probs, score_scale, a
         input_dim = sent_emb.get_shape().as_list()[-1]
 
         W = tf.get_variable("W", [input_dim, score_scale])
-        W_norm = tf.reduce_sum(tf.square(W), axis=0, keepdims=True)
+        W_norm = tf.norm(W, axis=0, keepdims=True)
         W = W / W_norm * tf.get_variable("scale", [], initializer=tf.constant_initializer(scale))
         w = tf.expand_dims(weight, axis=2)
         u = tf.nn.sigmoid(linear(sent_emb, W) * w)
