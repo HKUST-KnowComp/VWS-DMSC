@@ -10,7 +10,6 @@ from evaluator import Evaluator
 
 
 def train(config):
-    tf.set_random_seed(1111)
     word2idx, emb = load_embedding(config, config.emb)
     asp_word2idx, asp_emb = load_embedding(config, config.asp_emb)
     query_emb = load_query(config, config.aspect_seeds, word2idx, emb)

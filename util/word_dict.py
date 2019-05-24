@@ -1,6 +1,5 @@
 import numpy as np
 import math
-np.random.seed(0)
 
 class WordDict:
 

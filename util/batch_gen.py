@@ -1,8 +1,6 @@
 import numpy as np
 import random
 from tqdm import tqdm
-np.random.seed(0)
-random.seed(0)
 
 def create_one_batch(arg, ids, corpus):
     x, y, asp, senti, weight, senti_words = corpus
